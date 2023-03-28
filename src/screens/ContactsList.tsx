@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { urbitConfig as config } from '../config';
-import { create, SetState } from 'zustand';
+import { create } from 'zustand';
 import Contact from '../components/Contact';
 import Urbit from '@granitewall/react-native-api';
 import { useTheme } from '../ThemeContext';
 import UserStatus from '../components/UserStatus';
 import Notifications from 'react-native-push-notification';
+
 const subscription = {
     app: config.agent,
     path: config.path,
@@ -16,12 +17,14 @@ const subscription = {
     err: console.error,
     quit: console.error,
 };
+
 interface ContactData {
     id: string;
     name: string;
     onlineStatus: boolean | null;
     alert: boolean;
 }
+
 interface PalsStore {
     pals: ContactData[];
     online: string[];
@@ -30,9 +33,10 @@ interface PalsStore {
 }
 
 export const useUrbit = () => {
-    const [urbit, setUrbit]: [Urbit, any] = useState(null);
-    const [ship, setShip] = useState(null);
+    const [urbit, setUrbit] = useState<null | Urbit>(null);
+    const [ship, setShip] = useState<string | null>(null);
     const [connectionReady, setConnectionReady] = useState(false);
+
     useEffect(() => {
         if (!ship) {
             const urbit: Urbit = getUrbitApi(config.desk);
@@ -46,6 +50,7 @@ export const useUrbit = () => {
             setShip(config.ship);
         }
     }, [ship, urbit]);
+
     return [ship, urbit, connectionReady];
 };
 
@@ -54,6 +59,7 @@ export const getUrbitApi = (desk = config.desk) => {
     api && api.connect && api.connect();
     return api;
 };
+
 export const getSubscription = (urbit: Urbit, eventHandler = console.log) =>
     urbit.subscribe({
         ...subscription,
@@ -62,21 +68,19 @@ export const getSubscription = (urbit: Urbit, eventHandler = console.log) =>
     });
 
 export const setOnlineStatus = (api: Urbit, status: boolean) => {
-    console.log('setting online status', status);
     const tag = status ? 'sail' : 'moor';
     const json = status
         ? { sail: { in: [], ship: config.ship } }
         : {
             moor: { in: [], ship: config.ship },
         };
-    const response = api.poke({
+    return api.poke({
         app: 'boat',
         mark: 'boat-command',
         json: json,
     });
-    console.log(response);
-    return response;
 };
+
 const usePalsState = create<PalsStore>((set, get) => ({
     pals: [],
     online: [],
@@ -86,15 +90,12 @@ const usePalsState = create<PalsStore>((set, get) => ({
                 app: 'boat',
                 path: `/online/`,
             });
-            console.log('online pals', onlinePals);
             set({ online: onlinePals });
         } catch (e) {
             console.log(e);
         }
     },
     setAlert: (api: Urbit, id: string, alert: boolean) => {
-        console.log('setAlert', id, alert);
-
         const json = alert
             ? { tack: { in: [], ship: id } }
             : {
@@ -110,27 +111,23 @@ const usePalsState = create<PalsStore>((set, get) => ({
                 ? { ...pal, alert: alert, onlineStatus: alert ? pal.onlineStatus : null }
                 : pal,
         );
-        console.log('pals', pals);
         set({ pals });
     },
     fetchPals: async (api: Urbit) => {
         try {
-            // Fetch the pals from your Urbit instanc
             const response = await api.scry({
-                app: 'pals', // Replace this with the appropriate app name
-                path: '/json', // Replace this with the appropriate path
+                app: 'pals',
+                path: '/json',
             });
 
             const data = JSON.parse(JSON.stringify(response));
             const incomingContacts = Object.keys(data.incoming);
             const outgoingContacts = Object.keys(data.outgoing);
 
-            // Combine the incoming and outgoing contacts and remove duplicates
             const uniqueContacts = [
                 ...new Set([...incomingContacts, ...outgoingContacts]),
             ];
 
-            // Map each contact to a ContactData object
             const fetchedPals = uniqueContacts.map(contact => ({
                 id: contact,
                 name: contact,
@@ -143,21 +140,15 @@ const usePalsState = create<PalsStore>((set, get) => ({
     },
     subscribeOnline: (api: Urbit, retries = 0) => {
         const eventHandler = event => {
-            console.log('Received event:', event);
             if (event && event.sail) {
-                // Extract the new contact information from the event data
-
                 const updatedPals = get().pals.map(pal =>
                     pal.id === event.sail ? { ...pal, onlineStatus: true } : pal,
                 );
-                // Update the pals state
                 set({ pals: updatedPals });
             } else if (event && event.moor) {
                 const updatedPals = get().pals.map(pal =>
                     pal.id === event.moor ? { ...pal, onlineStatus: false } : pal,
                 );
-
-                // Update the pals state
                 set({ pals: updatedPals });
             }
         };
@@ -166,7 +157,7 @@ const usePalsState = create<PalsStore>((set, get) => ({
             if (!api.sseClientInitialized) {
                 api.eventSource();
             }
-            const response = api.subscribe({
+            api.subscribe({
                 ...subscription,
                 path: '/online',
                 event: eventHandler,
@@ -175,8 +166,6 @@ const usePalsState = create<PalsStore>((set, get) => ({
                     console.log('wtf', api);
                 },
             });
-            console.log('subscribed to online', api);
-            console.log(response);
         } catch (error) {
             console.error('Failed to subscribe to /online:', error);
             if (retries < 10) {
@@ -187,22 +176,23 @@ const usePalsState = create<PalsStore>((set, get) => ({
         }
     },
 }));
+
 const ContactsList: React.FC = () => {
     const [currentUserStatus, setCurrentUserStatus] = useState(false);
     const showNotification = (contactName: string) => {
-        console.log('here');
         Notifications.localNotification({
             title: 'Contact Online',
             message: `${contactName} is now online`,
         });
     };
-    const { theme, setTheme } = useTheme();
+
+    const { theme } = useTheme();
     const [ship, api, connectionReady] = useUrbit();
     const handleStatusChange = (status: boolean) => {
-        console.log('setting online status', status);
         setOnlineStatus(api, status);
         setCurrentUserStatus(status);
     };
+
     const pals = usePalsState(state => state.pals);
     const fetchPals = usePalsState(state => state.fetchPals);
     const fetchOnline = usePalsState(state => state.fetchOnline);
@@ -210,9 +200,11 @@ const ContactsList: React.FC = () => {
     const [retries, setRetries] = useState(0);
     const setAlert = usePalsState(state => state.setAlert);
     const insets = useSafeAreaInsets();
+
     const toggleSwitch = (api: Urbit, id: string, value: boolean) => {
         setAlert(api, id, value);
     };
+
     const styles = StyleSheet.create({
         container: {
             flex: 1,
@@ -231,13 +223,13 @@ const ContactsList: React.FC = () => {
             marginBottom: 5,
         },
     });
+
     useEffect(() => {
         if (connectionReady) {
             fetchOnline(api);
             fetchPals(api);
             subscribeOnline(api);
         } else if (retries < 10) {
-            console.log('retrying', api);
             api && api.connect && api.connect();
             const timer = setTimeout(() => {
                 setRetries(retries + 1);
@@ -268,6 +260,7 @@ const ContactsList: React.FC = () => {
             return -1;
         }
     });
+
     return (
         <View style={styles.container}>
             <FlatList
