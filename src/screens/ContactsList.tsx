@@ -7,11 +7,11 @@ import Contact from '../components/Contact';
 import Urbit from '@granitewall/react-native-api';
 import { useTheme } from '../ThemeContext';
 import UserStatus from '../components/UserStatus';
+import Notifications from 'react-native-push-notification';
 const subscription = {
     app: config.agent,
     path: config.path,
-    ship: window?.ship || '',
-    verbose: true,
+    ship: config.ship,
     event: console.log,
     err: console.error,
     quit: console.error,
@@ -19,13 +19,14 @@ const subscription = {
 interface ContactData {
     id: string;
     name: string;
-    onlineStatus: boolean;
+    onlineStatus: boolean | null;
     alert: boolean;
 }
 interface PalsStore {
     pals: ContactData[];
+    online: string[];
     fetchPals: (api: Urbit) => Promise<void>;
-    setAlert: (id: string, status: boolean) => void;
+    setAlert: (api: Urbit, id: string, alert: boolean) => void;
 }
 
 export const useUrbit = () => {
@@ -37,6 +38,9 @@ export const useUrbit = () => {
             const urbit: Urbit = getUrbitApi(config.desk);
             urbit.onOpen = () => {
                 setConnectionReady(true);
+            };
+            urbit.onError = err => {
+                console.error(err);
             };
             setUrbit(urbit);
             setShip(config.ship);
@@ -50,20 +54,63 @@ export const getUrbitApi = (desk = config.desk) => {
     api && api.connect && api.connect();
     return api;
 };
-export const getSubscription = (urbit, eventHandler = console.log) =>
+export const getSubscription = (urbit: Urbit, eventHandler = console.log) =>
     urbit.subscribe({
         ...subscription,
-        ship: urbit.ship,
+        ship: config.ship,
         event: eventHandler,
     });
 
+export const setOnlineStatus = (api: Urbit, status: boolean) => {
+    console.log('setting online status', status);
+    const tag = status ? 'sail' : 'moor';
+    const json = status
+        ? { sail: { in: [], ship: config.ship } }
+        : {
+            moor: { in: [], ship: config.ship },
+        };
+    const response = api.poke({
+        app: 'boat',
+        mark: 'boat-command',
+        json: json,
+    });
+    console.log(response);
+    return response;
+};
 const usePalsState = create<PalsStore>((set, get) => ({
     pals: [],
-    setAlert: (id: string, alert: boolean) => {
+    online: [],
+    fetchOnline: async (api: Urbit) => {
+        try {
+            const onlinePals = await api.scry({
+                app: 'boat',
+                path: `/online/`,
+            });
+            console.log('online pals', onlinePals);
+            set({ online: onlinePals });
+        } catch (e) {
+            console.log(e);
+        }
+    },
+    setAlert: (api: Urbit, id: string, alert: boolean) => {
         console.log('setAlert', id, alert);
+
+        const json = alert
+            ? { tack: { in: [], ship: id } }
+            : {
+                veer: { in: [], ship: id },
+            };
+        const response = api.poke({
+            app: 'boat',
+            mark: 'boat-command',
+            json: json,
+        });
         const pals = get().pals.map(pal =>
-            pal.id === id ? { ...pal, alertStatus: alert } : pal,
+            pal.id === id
+                ? { ...pal, alert: alert, onlineStatus: alert ? pal.onlineStatus : null }
+                : pal,
         );
+        console.log('pals', pals);
         set({ pals });
     },
     fetchPals: async (api: Urbit) => {
@@ -87,29 +134,84 @@ const usePalsState = create<PalsStore>((set, get) => ({
             const fetchedPals = uniqueContacts.map(contact => ({
                 id: contact,
                 name: contact,
-                onlineStatus: data.incoming[contact] === true,
+                onlineStatus: null,
             }));
             set({ pals: fetchedPals });
         } catch (error) {
             console.error('Failed to fetch pals:', error);
         }
     },
+    subscribeOnline: (api: Urbit, retries = 0) => {
+        const eventHandler = event => {
+            console.log('Received event:', event);
+            if (event && event.sail) {
+                // Extract the new contact information from the event data
+
+                const updatedPals = get().pals.map(pal =>
+                    pal.id === event.sail ? { ...pal, onlineStatus: true } : pal,
+                );
+                // Update the pals state
+                set({ pals: updatedPals });
+            } else if (event && event.moor) {
+                const updatedPals = get().pals.map(pal =>
+                    pal.id === event.moor ? { ...pal, onlineStatus: false } : pal,
+                );
+
+                // Update the pals state
+                set({ pals: updatedPals });
+            }
+        };
+
+        try {
+            if (!api.sseClientInitialized) {
+                api.eventSource();
+            }
+            const response = api.subscribe({
+                ...subscription,
+                path: '/online',
+                event: eventHandler,
+                err: e => {
+                    console.log('error', e);
+                    console.log('wtf', api);
+                },
+            });
+            console.log('subscribed to online', api);
+            console.log(response);
+        } catch (error) {
+            console.error('Failed to subscribe to /online:', error);
+            if (retries < 10) {
+                setTimeout(() => {
+                    get().subscribeOnline(api, retries + 1);
+                }, 1000);
+            }
+        }
+    },
 }));
 const ContactsList: React.FC = () => {
     const [currentUserStatus, setCurrentUserStatus] = useState(false);
-
-    const handleStatusChange = (status: boolean) => {
-        setCurrentUserStatus(status);
+    const showNotification = (contactName: string) => {
+        console.log('here');
+        Notifications.localNotification({
+            title: 'Contact Online',
+            message: `${contactName} is now online`,
+        });
     };
     const { theme, setTheme } = useTheme();
     const [ship, api, connectionReady] = useUrbit();
+    const handleStatusChange = (status: boolean) => {
+        console.log('setting online status', status);
+        setOnlineStatus(api, status);
+        setCurrentUserStatus(status);
+    };
     const pals = usePalsState(state => state.pals);
     const fetchPals = usePalsState(state => state.fetchPals);
+    const fetchOnline = usePalsState(state => state.fetchOnline);
+    const subscribeOnline = usePalsState(state => state.subscribeOnline);
     const [retries, setRetries] = useState(0);
     const setAlert = usePalsState(state => state.setAlert);
     const insets = useSafeAreaInsets();
-    const toggleSwitch = (id: string, value: boolean) => {
-        setAlert(id, value);
+    const toggleSwitch = (api: Urbit, id: string, value: boolean) => {
+        setAlert(api, id, value);
     };
     const styles = StyleSheet.create({
         container: {
@@ -131,7 +233,9 @@ const ContactsList: React.FC = () => {
     });
     useEffect(() => {
         if (connectionReady) {
+            fetchOnline(api);
             fetchPals(api);
+            subscribeOnline(api);
         } else if (retries < 10) {
             console.log('retrying', api);
             api && api.connect && api.connect();
@@ -143,17 +247,25 @@ const ContactsList: React.FC = () => {
         }
     }, [connectionReady, retries]);
 
+    useEffect(() => {
+        pals.forEach(pal => {
+            if (pal.onlineStatus && pal.alert) {
+                showNotification(pal.name);
+            }
+        });
+    }, [pals]);
+
     const sortedPals = pals.sort((a, b) => {
-        if (a.alertStatus && !b.alertStatus) {
+        if (a.alert && !b.alert) {
             return -1;
-        } else if (!a.alertStatus && b.alertStatus) {
+        } else if (!a.alert && b.alert) {
             return 1;
         } else if (a.onlineStatus && !b.onlineStatus) {
             return -1;
         } else if (!a.onlineStatus && b.onlineStatus) {
-            return -1;
+            return 1;
         } else {
-            return a.name.localeCompare(b.name);
+            return -1;
         }
     });
     return (
@@ -165,8 +277,8 @@ const ContactsList: React.FC = () => {
                     <View style={styles.contactContainer}>
                         <Contact name={item.name} onlineStatus={item.onlineStatus} />
                         <Switch
-                            onValueChange={value => toggleSwitch(item.id, value)}
-                            value={item.alertStatus}
+                            onValueChange={value => toggleSwitch(api, item.id, value)}
+                            value={item.alert}
                         />
                     </View>
                 )}
@@ -175,7 +287,7 @@ const ContactsList: React.FC = () => {
             <UserStatus
                 name="u boating?" // Replace with the current user's name
                 onlineStatus={currentUserStatus}
-                onStatusChange={handleStatusChange}
+                onStatusChange={value => handleStatusChange(value)}
             />
         </View>
     );

@@ -13,9 +13,17 @@ const deviceWidth = Dimensions.get('window').width;
 interface UserStatusProps {
     user: string;
     online: boolean;
+    onStatusChange?:
+    | ((value: boolean) => Promise<void> | void)
+    | null
+    | undefined;
 }
 
-const UserStatus: React.FC<UserStatusProps> = ({ user, online }) => {
+const UserStatus: React.FC<UserStatusProps> = ({
+    user,
+    online,
+    onStatusChange,
+}) => {
     const [isVisible, setIsVisible] = useState(true);
     const [isOnline, setIsOnline] = useState(online);
 
@@ -24,7 +32,9 @@ const UserStatus: React.FC<UserStatusProps> = ({ user, online }) => {
     };
 
     const toggleStatus = () => {
+        console.log('toggleStatus', this.onStatusChange);
         setIsOnline(!isOnline);
+        onStatusChange && onStatusChange(!isOnline);
     };
 
     return (

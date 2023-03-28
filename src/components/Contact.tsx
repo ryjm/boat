@@ -4,7 +4,7 @@ import { useTheme } from '../ThemeContext';
 
 interface ContactProps {
   name: string;
-  onlineStatus: boolean;
+  onlineStatus: boolean | null;
 }
 
 const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
@@ -30,10 +30,16 @@ const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
       fontWeight: 'bold',
       paddingRight: 8,
     },
-    onlineStatus: {
+    statusIndicator: {
       width: 16,
       height: 16,
       borderRadius: 8,
+      marginRight: 5,
+    },
+    adrift: {
+      backgroundColor: 'lightgray',
+      borderWidth: 1,
+      borderColor: 'gray',
     },
     online: {
       backgroundColor: 'lightgreen',
@@ -41,21 +47,24 @@ const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
       borderColor: 'green',
     },
     offline: {
-      backgroundColor: 'lightgray',
+      backgroundColor: 'lightcoral',
       borderWidth: 1,
-      borderColor: 'gray',
+      borderColor: 'red',
     },
   });
 
+  let statusStyle;
+  if (onlineStatus === null) {
+    statusStyle = styles.adrift;
+  } else if (onlineStatus) {
+    statusStyle = styles.online;
+  } else {
+    statusStyle = styles.offline;
+  }
   return (
     <View style={styles.card}>
       <Text style={styles.name}>{name}</Text>
-      <View
-        style={[
-          styles.onlineStatus,
-          onlineStatus ? styles.online : styles.offline,
-        ]}
-      />
+      <View style={[styles.statusIndicator, statusStyle]} />
     </View>
   );
 };
