@@ -1,0 +1,10 @@
+:~
+  title+'boat'
+  info+'urbrain, urbit'
+  color+0xee.5432
+  version+[0 0 1]
+  website+'https://urbit.land'
+  license+'MIT'
+  base+'boat'
+  site+/boat
+==

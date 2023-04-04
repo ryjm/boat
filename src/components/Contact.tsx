@@ -1,20 +1,31 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../ThemeContext';
-
 interface ContactProps {
   name: string;
   onlineStatus: boolean | null;
 }
 
-const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
+const Contact: React.FC<ContactProps> = ({
+  toggleAlert,
+  name,
+  onlineStatus,
+  alert,
+}) => {
   const { theme, setTheme } = useTheme();
   const styles = StyleSheet.create({
     card: {
+      flex: 1,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: theme === 'light' ? '#fff' : '#444',
+      backgroundColor: alert
+        ? theme === 'light'
+          ? '#e6ffe6'
+          : '#051'
+        : theme === 'light'
+          ? '#fff'
+          : '#444',
       borderRadius: 8,
       padding: 16,
       marginBottom: 12,
@@ -31,6 +42,7 @@ const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
       paddingRight: 8,
     },
     statusIndicator: {
+      alignSelf: 'flex-end',
       width: 16,
       height: 16,
       borderRadius: 8,
@@ -61,11 +73,17 @@ const Contact: React.FC<ContactProps> = ({ name, onlineStatus }) => {
   } else {
     statusStyle = styles.offline;
   }
+  const handlePress = () => {
+    toggleAlert();
+  };
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.name}>{name}</Text>
-      <View style={[styles.statusIndicator, statusStyle]} />
-    </View>
+    <TouchableOpacity onPress={handlePress}>
+      <View style={styles.card}>
+        <Text style={styles.name}>~{name}</Text>
+        <View style={[styles.statusIndicator, statusStyle]} />
+      </View>
+    </TouchableOpacity>
   );
 };
 

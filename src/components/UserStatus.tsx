@@ -32,7 +32,6 @@ const UserStatus: React.FC<UserStatusProps> = ({
     };
 
     const toggleStatus = () => {
-        console.log('toggleStatus', this.onStatusChange);
         setIsOnline(!isOnline);
         onStatusChange && onStatusChange(!isOnline);
     };
@@ -46,13 +45,17 @@ const UserStatus: React.FC<UserStatusProps> = ({
                         <Text style={styles.status}>{isOnline ? 'Online' : 'Offline'}</Text>
                     </View>
                 ) : null}
-                <TouchableOpacity onPress={toggleVisibility} style={styles.button}>
-                    <Text style={styles.buttonText}>
+                <TouchableOpacity
+                    onPress={toggleVisibility}
+                    style={[styles.button, styles.mediumButton]}>
+                    <Text style={[styles.buttonText, styles.mediumButtonText]}>
                         {isVisible ? 'Hide' : 'Show'} status
                     </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={toggleStatus} style={styles.statusButton}>
-                    <Text style={styles.statusButtonText}>
+                <TouchableOpacity
+                    onPress={toggleStatus}
+                    style={[styles.statusButton, styles.largeButton]}>
+                    <Text style={[styles.statusButtonText, styles.largeButtonText]}>
                         {isOnline ? 'Go Offline' : 'Go Online'}
                     </Text>
                 </TouchableOpacity>
@@ -97,21 +100,31 @@ const styles = StyleSheet.create({
         marginLeft: 10,
     },
     button: {
-        backgroundColor: '#8bc34a',
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
+        borderRadius: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         marginLeft: 10,
+    },
+    mediumButton: {
+        backgroundColor: '#8bc34a',
+    },
+    largeButton: {
+        backgroundColor: '#4caf50',
     },
     buttonText: {
         color: '#ffffff',
         fontSize: 14,
     },
+    mediumButtonText: {
+        fontSize: 16,
+    },
+    largeButtonText: {
+        fontSize: 18,
+    },
     statusButton: {
-        backgroundColor: '#4caf50',
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
+        borderRadius: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         marginLeft: 10,
     },
     statusButtonText: {
