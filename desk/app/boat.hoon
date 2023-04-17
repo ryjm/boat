@@ -22,6 +22,7 @@
 %+  verb  &
 ^-  agent:gall
 ::
+=<
 |_  =bowl:gall
 +*  this  .
     def   ~(. (default-agent this %|) bowl)
@@ -44,108 +45,108 @@
 ++  on-poke
   |=  [=mark =vase]
   ^-  (quip card _this)
-  |^  ?+  mark  (on-poke:def mark vase)
-      ::  %boat-command: local app control
-      ::
-      ?(%noun %boat-command)
-      =+  (mule |.(!<(@tas vase)))
-      =/  cmd
-        ?-    -.-
-          %.y  ;;(command [p ~])
-          %.n   ;;(command !<(* vase))
-        ==
-      ?>  =(our src):bowl
-      ?:  (~(has in in.cmd) ~.)
-        ~|  [%illegal-empty-list-name in=-.cmd]
-        !!
-      ::
-      =/  course=?  (~(has in convoy) ship.cmd)
-      =/  alive=?  ?|  (~(has in online) ship.cmd)
-                      &(=(our.bowl ship.cmd) boating)
-                    ==
-      =;  [yow=? =_radar =_online]
-        ^-  (quip card _this)
-        =?  boating  =(our.bowl ship.cmd)  ?:(?=(%sail -.cmd) & |)
-        :_  this(radar.state radar, online.state online, boating.state boating)
-        ?.  yow  ~
-        ?.  ~(running boat bowl)  ((slog leaf+"%boat: %pals not running") ~)
-        =+  .^(pals=(set @p) %gx /(scot %p our.bowl)/pals/(scot %da now.bowl)/mutuals/noun)
-        =/  =gesture
-          ?-  -.cmd
-            %tack  [%ale ~]
-            %veer  [%nap ~]
-            %sail  [%liv ~]
-            %moor  [%ded ~]
-          ==
-        ~&  [%sending-gesture gesture ship.cmd]
-        =;  cards=(list card)
-          ?.  ?=(?(%liv %ded) -.gesture)
-            [%pass /[-.gesture] %agent [ship.cmd dap.bowl] %poke [%boat-gesture !>(gesture)]]~
-          %+  welp  cards
-          %+  turn  ~(tap in (~(int in pals) ~(key by radar)))
-          |=  =ship
-          [%pass /[-.gesture] %agent [ship dap.bowl] %poke [%boat-gesture !>(gesture)]]
-        =/  =effect
-          ?-  -.cmd
-            %tack  [- ship]:cmd
-            %veer  [- ship]:cmd
-            %sail  [- ship]:cmd
-            %moor  [- ship]:cmd
-          ==
-        =/  =cage     [%boat-effect !>(effect)]
-        ~&  [%sending-effect effect]
-        :~
-          [%give %fact [/online]~ cage]
-        ==
-  ::
-      ?-  -.cmd
-          %sail
-        =?  online  course  (~(put in online) ship.cmd)
-        [!alive radar online]
-        ::
-          %moor
-        =?  online  course  (~(del in online) ship.cmd)
-        [alive radar online]
-          %tack
-        :-  !course
-        :_  online
-        %+  ~(put by radar)  ship.cmd
-        %-  ~(uni in in.cmd)
-        (~(gut by radar) ship.cmd ~)
-      ::
-          %veer
-        ?:  =(~ in.cmd)
-          ::  remove chart entirely
-          ::
-          [course (~(del by radar) ship.cmd) online]
-        ::  remove from specified lists
-        ::
-        :-  |
-        :_  online
-        =.  radar
-          =/  liz=(list @ta)  ~(tap in in.cmd)
-          |-  ^+  radar
-          ?~  liz  radar
-          $(liz t.liz, radar (~(del ju radar) ship.cmd i.liz))
-        =?  radar  !(~(has by radar) ship.cmd)
-          (~(put by radar) ship.cmd ~)
-        radar
+  ?+  mark  (on-poke:def mark vase)
+    ::  %boat-command: local app control
+    ::
+    ?(%noun %boat-command)
+    =+  (mule |.(!<(@tas vase)))
+    =/  cmd=command
+      ?-    -.-
+        %.y  ;;(command [p ~])
+        %.n   ;;(command !<(* vase))
       ==
+    ?>  =(our src):bowl
+    ?:  (~(has in in.cmd) ~.)
+      ~|  [%illegal-empty-list-name in=-.cmd]
+      !!
+    ::
+    =/  course=?  (~(has in convoy) ship.cmd)
+    =/  alive=?  ?|  (~(has in online) ship.cmd)
+                    &(=(our.bowl ship.cmd) boating)
+                  ==
+    =;  [yow=? =_radar =_online]
+      ^-  (quip card _this)
+      =?  boating  =(our.bowl ship.cmd)  ?:(?=(%sail -.cmd) & |)
+      :_  this(radar.state radar, online.state online, boating.state boating)
+      ?.  yow  ~
+      ?.  ~(running boat bowl)  ((slog leaf+"%boat: %pals not running") ~)
+      =+  .^(pals=(set @p) %gx /(scot %p our.bowl)/pals/(scot %da now.bowl)/mutuals/noun)
+      =/  =gesture
+        ?-  -.cmd
+          %tack  [%ale ~]
+          %veer  [%nap ~]
+          %sail  [%liv ~]
+          %moor  [%ded ~]
+        ==
+      ~&  [%sending-gesture gesture ship.cmd]
+      =;  cards=(list card)
+        ?.  ?=(?(%liv %ded) -.gesture)
+          [%pass /[-.gesture] %agent [ship.cmd dap.bowl] %poke [%boat-gesture !>(gesture)]]~
+        %+  welp  cards
+        %+  turn  ~(tap in (~(int in pals) charted))
+        |=  =ship
+        [%pass /[-.gesture] %agent [ship dap.bowl] %poke [%boat-gesture !>(gesture)]]
+      =/  =effect
+        ?-  -.cmd
+          %tack  [- ship]:cmd
+          %veer  [- ship]:cmd
+          %sail  [- ship]:cmd
+          %moor  [- ship]:cmd
+        ==
+      =/  =cage     [%boat-effect !>(effect)]
+      ~&  [%sending-effect effect]
+      :~
+        [%give %fact [/online]~ cage]
+      ==
+  ::
+  ?-  -.cmd
+      %sail
+    =?  online  course  (~(put in online) ship.cmd)
+    [!alive radar online]
+    ::
+      %moor
+    =?  online  course  (~(del in online) ship.cmd)
+    [alive radar online]
+      %tack
+    :-  !course
+    :_  online
+    %+  ~(put by radar)  ship.cmd
+    =/  cum  *cummand
+    =/  ino
+      =<  ins  cum 
+    %-  ~(uni in in.cmd)
+    (~(gut by radar) ship.cmd ~)
+  ::
+      %veer
+    ?:  =(~ in.cmd)
+      ::  remove chart entirely
+      ::
+      [course (~(del by radar) ship.cmd) online]
+    ::  remove from specified lists
+    ::
+    :-  |
+    :_  online
+    =.  radar
+      =/  liz=(list @ta)  ~(tap in in.cmd)
+      |-  ^+  radar
+      ?~  liz  radar
+      $(liz t.liz, radar (~(del ju radar) ship.cmd i.liz))
+    =?  radar  !(~(has by radar) ship.cmd)
+      (~(put by radar) ship.cmd ~)
+    radar
+  ==
   ::
     ::  %boat-gesture: foreign %boat signals
     ::
       %boat-gesture
-      ~&  [%boat-gesture [our src]:bowl]
-     ~&  [%boat-gesture !<(gesture vase)]
     ?<  =(our src):bowl
     =*  ship  src.bowl
     =+  !<(=gesture vase)
-    ~&  >>  convvoy+convoy
     ?.  (~(has in convoy) ship)
       ~&  [%not-in-convoy ship]
       ?+    -.gesture  ~|([%uncharted-gesture gesture] !!)
         %ale  [~ this(sos.state (~(put in sos) ship))]
-        %nap  [[[%give %kick [/online]~ `ship]]~ this(sos.state (~(del in sos) ship))]
+        %nap  [[[%give %kick ~[/online /convoy] `ship]]~ this(sos.state (~(del in sos) ship))]
       ==
       ::
     =/  [yow=? =_online]
@@ -202,8 +203,6 @@
       (on-poke %boat-command !>(cmd))
     ['charted!' caz +.state]
   ==
-  ++  convoy  (~(int in sos) ~(key by radar))
---
 ::
 ++  on-watch
   |=  =path
@@ -213,7 +212,7 @@
       [%online ~]
     =+  pals=.^((set @p) %gx /(scot %p our.bowl)/pals/(scot %da now.bowl)/mutuals/noun)
     :_  this
-    %+  turn  ~(tap in (~(int in pals) (~(int in sos) ~(key by radar))))
+    %+  turn  ~(tap in (~(int in pals) convoy))
     |=  =ship
     =/  =effect  ?:(boating [%sail ship] [%moor ship])
     ~&  [%sending-effect effect]
@@ -221,7 +220,7 @@
   ::
       [%convoy ~]
     :_  this
-    %+  turn  ~(tap in (~(int in sos) ~(key by radar)))
+    %+  turn  ~(tap in convoy)
     |=(=@p [%give %fact ~ %boat-effect !>(`effect`[%tack p])])
   ::
       [%radar ~]
@@ -233,7 +232,7 @@
 ++  on-agent
   |=  [=wire =sign:agent:gall]
   ^-  (quip card _this)
-  =/  hearing=(set ship)
+  =/  hearing=(set ship)           ::  all known subscriptions
     %-  ~(gas in *(set ship))
     %+  murn  ~(tap by wex.bowl)
     |=  [[=^wire =ship =term] [acked=? =path]]
@@ -263,12 +262,13 @@
         %kick   [~ this]
         %watch-ack  [~ this]
         %fact
-        [~ this]
+      =-  [- this]
+      [%pass /boat [%agent [src.bowl dap.bowl] %watch /online]]~
     ==
     ::
       [%nap ~]
     =-  [- this]
-    [%pass /online [%agent [src.bowl dap.bowl] %leave ~]]~
+    [%pass /boat [%agent [src.bowl dap.bowl] %leave ~]]~
     ::
       [%ded ~]
     :_  this
@@ -286,7 +286,7 @@
         ?:  (~(has in hearing) src.bowl)
           [~ this(receipts receipt)]
         :_  this(receipts receipt)
-        ?.  (~(has in (~(int in sos) ~(key by radar))) src.bowl)  ~
+        ?.  (~(has in convoy) src.bowl)  ~
         :~
           [%pass /boat %agent [src.bowl %boat] %watch /convoy]
           [%pass /boat %agent [src.bowl %boat] %watch /online]
@@ -373,5 +373,14 @@
   ==
 ::
 ++  on-leave  on-leave:def
+::
 ++  on-fail   on-fail:def
 --
+::
+|_  =bowl:gall
+++  requests  sos
+++  charted  ~(key by radar)
+++  convoy  (~(int in charted) requests)
+
+--
+

@@ -16,7 +16,6 @@ import { create } from 'zustand';
 import Contact from '../components/Contact';
 import Urbit from '@granitewall/react-native-api';
 import { useTheme } from '../ThemeContext';
-import UserStatus from '../components/UserStatus';
 import Notifications from '@react-native-community/push-notification-ios';
 import * as ExpoNotifications from 'expo-notifications';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -39,6 +38,11 @@ type Props = {
   navigation: ContactsListNavigationProp;
   route: ContactsListRouteProp;
 };
+type UrbitStatus = {
+  ship: string | null;
+  api: Urbit;
+  connectionReady: boolean;
+};
 
 interface ContactData {
   id: string;
@@ -49,15 +53,16 @@ interface ContactData {
 
 interface PalsStore {
   fetchOnline: any;
-  subscribeOnline(api: Urbit): unknown;
+  subscribeOnline(api: Urbit, retries: number): unknown;
   pals: ContactData[];
   online: string[];
   fetchPals: (api: Urbit) => Promise<void>;
   setAlert: (api: Urbit, id: string, alert: boolean) => void;
 }
 
-export const useUrbit = (config: Config) => {
-  const [urbit, setUrbit] = useState<null | Urbit>(null);
+export function useUrbit(config: Config): UrbitStatus {
+  const urbit: Urbit = new Urbit('', '', '', '');
+  const [api, setApi] = useState<Urbit>(urbit);
   const [ship, setShip] = useState<string | null>(null);
   const [connectionReady, setConnectionReady] = useState(false);
 
@@ -70,13 +75,14 @@ export const useUrbit = (config: Config) => {
       urbit.onError = (err: any) => {
         console.error(err);
       };
-      setUrbit(urbit);
+      setApi(urbit);
       setShip(config.ship);
     }
-  }, [ship, urbit]);
+  }, [ship, api]);
 
-  return [ship, urbit, connectionReady];
-};
+  return { ship, api, connectionReady };
+}
+
 ExpoNotifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -84,26 +90,23 @@ ExpoNotifications.setNotificationHandler({
     shouldSetBadge: true,
   }),
 });
+
 const onRegistered = (deviceToken: string) => {
-  // This function is called when the device gets registered for push notifications.
   console.log(
     'Device registered for remote notifications with token: ',
     deviceToken,
   );
 };
 
-const onRegistrationError = (error: Error) => {
-  // This function is called when there is an error registering the device for push notifications.
+const onRegistrationError = (error: any) => {
   console.log('Failed to register for remote notifications: ', error);
 };
 
 const onRemoteNotification = (notification: any) => {
-  // This function is called when a remote notification is received while the app is running in the foreground or background.
   console.log('Received remote notification: ', notification);
 };
 
 const onLocalNotification = (notification: any) => {
-  // This function is called when a local notification is received while the app is running in the foreground or background.
   console.log('Received local notification: ', notification);
 };
 
@@ -119,7 +122,7 @@ export const showNotification = (contactName: string) => {
 const deviceWidth = Dimensions.get('window').width;
 const slideDistance = deviceWidth * 0.35;
 
-export const getUrbitApi = (config: Config) => {
+export const getUrbitApi: (config: Config) => Urbit = (config: Config) => {
   console.log('connecting to config', config);
   const api = new Urbit(config.url, config.code, config.desk, config.ship);
   api && api.connect && api.connect();
@@ -148,7 +151,7 @@ const usePalsState = create<PalsStore>((set, get) => ({
   online: [],
   fetchOnline: async (api: Urbit) => {
     try {
-      const onlinePals = await api.scry({
+      const onlinePals: string[] = await api.scry({
         app: 'boat',
         path: `/online/`,
       });
@@ -168,8 +171,19 @@ const usePalsState = create<PalsStore>((set, get) => ({
       mark: 'boat-command',
       json: json,
     });
+
+    const online = api
+      .scry({
+        app: 'boat',
+        path: `/online/~${id}`,
+      })
+      .then(online => {
+        console.log('online', online);
+        return online;
+      });
+
     const pals = get().pals.map(pal =>
-      pal.id === id ? { ...pal, alert: alert } : pal,
+      pal.id === id ? { ...pal, alert: alert, onlineStatus: online } : pal,
     );
     set({ pals });
   },
@@ -188,10 +202,11 @@ const usePalsState = create<PalsStore>((set, get) => ({
         ...new Set([...incomingContacts, ...outgoingContacts]),
       ];
 
-      const fetchedPals = uniqueContacts.map(contact => ({
+      const fetchedPals: ContactData[] = uniqueContacts.map(contact => ({
         id: contact,
         name: contact,
         onlineStatus: null,
+        alert: false,
       }));
       set({ pals: fetchedPals });
     } catch (error) {
@@ -245,7 +260,7 @@ const ContactsList: React.FC<Props> = ({ route }) => {
   const { config } = route.params;
   const [isOnline, setOnline] = useState(false);
   const { theme } = useTheme();
-  const [ship, api, connectionReady] = useUrbit(config);
+  let { ship, api, connectionReady } = useUrbit(config);
   const handleStatusChange = (api: Urbit, status: boolean) => {
     setOnlineStatus(config, api, status);
     setOnline(status);
@@ -268,29 +283,6 @@ const ContactsList: React.FC<Props> = ({ route }) => {
   const [retries, setRetries] = useState(0);
   const setAlert = usePalsState(state => state.setAlert);
   const insets = useSafeAreaInsets();
-
-  const toggleSwitch = (api: Urbit, id: string, value: boolean) => {
-    if (!value) {
-      setAlert(api, id, true);
-    } else {
-      setAlert(api, id, false);
-    }
-  };
-
-  const sortedPals = pals.sort((a, b) => {
-    if (a.alert && !b.alert) {
-      return -1;
-    } else if (!a.alert && b.alert) {
-      return 1;
-    }
-    if (a.onlineStatus && !b.onlineStatus) {
-      return -1;
-    } else if (!a.onlineStatus && b.onlineStatus) {
-      return 1;
-    }
-
-    return 0;
-  });
 
   useEffect(() => {
     ExpoNotifications.addNotificationResponseReceivedListener(
@@ -329,15 +321,15 @@ const ContactsList: React.FC<Props> = ({ route }) => {
       PushNotificationIOS.removeEventListener('notification');
       PushNotificationIOS.removeEventListener('localNotification');
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (connectionReady) {
+    if (api && connectionReady) {
       fetchOnline(api);
       fetchPals(api);
-      subscribeOnline(api);
+      subscribeOnline(api, retries);
     } else if (retries < 10) {
+      // @ts-ignore
       api && api.connect && api.connect();
       const timer = setTimeout(() => {
         setRetries(retries + 1);
@@ -345,12 +337,21 @@ const ContactsList: React.FC<Props> = ({ route }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [connectionReady, retries]);
+  }, [api, connectionReady, retries]);
+
+  const toggleSwitch = (id: string, value: boolean) => {
+    if (!value) {
+      setAlert(api, id, true);
+    } else {
+      setAlert(api, id, false);
+    }
+  };
 
   const handleStatusPress = () => {
     handleStatusChange(api, !isOnline);
     animateStatusText(isOnline ? -slideDistance : 0);
   };
+
   const renderItem = ({ item }: { item: ContactData }) => {
     const renderContact = () => (
       <View
@@ -361,7 +362,7 @@ const ContactsList: React.FC<Props> = ({ route }) => {
           alignItems: 'center',
         }}>
         <Contact
-          toggleAlert={() => toggleSwitch(api, item.id, item.alert)}
+          toggleAlert={() => toggleSwitch(item.id, item.alert)}
           name={item.name}
           onlineStatus={item.onlineStatus}
           alert={item.alert}
@@ -372,12 +373,12 @@ const ContactsList: React.FC<Props> = ({ route }) => {
     const renderVideoCallButton = () => (
       <TouchableOpacity
         onPress={() => {
-          const timestamp = Date.now()
-            .toLocaleString('en-US', { timeZone: 'UTC', hour12: false })
-            .replace(/:/g, '');
+          // const timestamp = Date.now()
+          //   .toLocaleString('en-US', { timeZone: 'UTC', hour12: false })
+          //   .replace(/:/g, '');
           // maybe use this later?
           // const jitsiLink = `https://meet.jit.si/${item.id.trim()}And${ship}${timestamp}`;
-          const jitsiLink = `https://meet.jit.si/${item.id.trim()}And${ship.trim()}`;
+          const jitsiLink = `https://meet.jit.si/${item.id.trim()}And${ship?.trim()}`;
           Linking.openURL(jitsiLink).catch(err =>
             console.error('An error occurred', err),
           );
@@ -407,75 +408,6 @@ const ContactsList: React.FC<Props> = ({ route }) => {
       renderContact()
     );
   };
-  // const renderItem = ({ item }: { item: ContactData }) => (
-  //   <SwipeListView
-  //     data={[item]}
-
-  //     renderItem={({ item }) => (
-  //       <View
-  //         style={{
-  //           ...styles.contactContainer,
-  //           justifyContent: 'flex-start',
-  //           flexDirection: 'row',
-  //           alignItems: 'center',
-  //         }}>
-  //         <Contact
-  //           toggleAlert={() => toggleSwitch(api, item.id, item.alert)}
-  //           name={item.name}
-  //           onlineStatus={item.onlineStatus}
-  //           alert={item.alert}
-  //         />
-  //       </View>
-  //     )}
-  //     renderHiddenItem={({ item }) => (
-  //       <View>
-  //         <TouchableOpacity
-  //           onPress={() => {
-  //             const timestamp = Date.now()
-  //               .toLocaleString('en-US', { timeZone: 'UTC', hour12: false })
-  //               .replace(/:/g, '');
-  //             // maybe use this later?
-  //             // const jitsiLink = `https://meet.jit.si/${item.id.trim()}And${ship}${timestamp}`;
-  //             const jitsiLink = `https://meet.jit.si/${item.id.trim()}And${ship.trim()}`;
-  //             Linking.openURL(jitsiLink).catch(err =>
-  //               console.error('An error occurred', err),
-  //             );
-  //           }}
-  //           style={{
-  //             justifyContent: 'center',
-  //             alignItems: 'center',
-  //             height: '100%',
-  //             width: 75,
-  //           }}>
-  //           <Ionicons
-  //             name="videocam"
-  //             size={24}
-  //             color={theme === 'light' ? 'black' : 'white'}
-  //           />
-  //         </TouchableOpacity>
-  //       </View>
-  //     )}
-  //     leftOpenValue={75}
-  //   />
-  // );
-
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <UserStatus
-        name="u boating?" // Replace with the current user's name
-        onlineStatus={isOnline}
-        onStatusChange={value => handleStatusChange(value)}
-      />
-    </View>
-  );
-
-  const renderOnlineButton = () => (
-    <View style={[styles.onlineButtonContainer, { marginTop: insets.top }]}>
-      <TouchableOpacity>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   const styles = StyleSheet.create({
     contentContainer: {
@@ -555,6 +487,7 @@ const ContactsList: React.FC<Props> = ({ route }) => {
       alignItems: 'center',
     },
   });
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
@@ -593,5 +526,5 @@ const ContactsList: React.FC<Props> = ({ route }) => {
     </View>
   );
 };
+
 export default ContactsList;
-//import SwipeListView from 'react-native-swipe-list-view';

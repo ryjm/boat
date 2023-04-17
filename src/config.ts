@@ -1,13 +1,13 @@
 export const urbitConfig = {
-  desk: 'pals',
-  path: '/',
-  agent: 'pals',
-  ship: 'littel-wolfur',
-  url: 'https://littel-wolfur.urbit.land',
-  code: 'laslut-hadrux-ranryn-bacbyt'
-  // ship: 'bannyt-rilbes-littel-wolfur',
-  // url: 'http://monadnock.local:8085',
-  // code: 'rignex-somfel-bisren-sogdys',
+  desk: 'boat',
+  path: '/boat',
+  agent: 'boat',
+  ship: 'bus',
+  url: 'http://localhost:8080',
+  code: 'riddec-bicrym-ridlev-pocsef',
+  event: console.log,
+  err: console.error,
+  quit: console.log,
 };
 
 export const authSubConfig = {
@@ -16,3 +16,5 @@ export const authSubConfig = {
   code: window?.ship || process.env.REACT_APP_SHIP_CODE || '',
   verbose: true,
 };
+
+export type Config = typeof urbitConfig;

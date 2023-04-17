@@ -4,6 +4,8 @@ import { useTheme } from '../ThemeContext';
 interface ContactProps {
   name: string;
   onlineStatus: boolean | null;
+  toggleAlert: () => void;
+  alert: boolean;
 }
 
 const Contact: React.FC<ContactProps> = ({
@@ -12,7 +14,7 @@ const Contact: React.FC<ContactProps> = ({
   onlineStatus,
   alert,
 }) => {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const styles = StyleSheet.create({
     card: {
       flex: 1,

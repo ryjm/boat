@@ -25,6 +25,7 @@
   .^(mold %gx (weld pals (snoc `^path`path %noun)))
 ::
 ++  s
+  ::
   |*  [=mold =path]  ~+
   ?.  sailing  *mold
   .^(mold %gx (weld boat (snoc `^path`path %noun)))
