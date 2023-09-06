@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Linking,
-  Animated,
   Dimensions,
+  Animated,
+  View,
+  TouchableOpacity,
+  Linking,
+  StyleSheet,
+  FlatList,
+  Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { create } from 'zustand';
@@ -61,26 +61,24 @@ interface PalsStore {
 }
 
 export function useUrbit(config: Config): UrbitStatus {
-  const urbit: Urbit = new Urbit('', '', '', '');
-  const [api, setApi] = useState<Urbit>(urbit);
+  const urbitRef = useRef(new Urbit('', '', '', ''));
   const [ship, setShip] = useState<string | null>(null);
   const [connectionReady, setConnectionReady] = useState(false);
 
   useEffect(() => {
     if (!ship) {
-      const urbit: Urbit = getUrbitApi(config);
-      urbit.onOpen = () => {
+      urbitRef.current = getUrbitApi(config);
+      urbitRef.current.onOpen = () => {
         setConnectionReady(true);
       };
-      urbit.onError = (err: any) => {
+      urbitRef.current.onError = (err: any) => {
         console.error(err);
       };
-      setApi(urbit);
       setShip(config.ship);
     }
-  }, [ship, api]);
+  }, [ship, config]);
 
-  return { ship, api, connectionReady };
+  return { ship, api: urbitRef.current, connectionReady };
 }
 
 ExpoNotifications.setNotificationHandler({
@@ -129,16 +127,12 @@ export const getUrbitApi: (config: Config) => Urbit = (config: Config) => {
   return api;
 };
 
-export const setOnlineStatus = (
-  config: Config,
-  api: Urbit,
-  status: boolean,
-) => {
+export const setOnlineStatus = (config: Config, status: boolean) => {
   const json = status
     ? { sail: { in: [], ship: config.ship } }
     : {
-      moor: { in: [], ship: config.ship },
-    };
+        moor: { in: [], ship: config.ship },
+      };
   return api.poke({
     app: 'boat',
     mark: 'boat-command',
@@ -153,7 +147,7 @@ const usePalsState = create<PalsStore>((set, get) => ({
     try {
       const onlinePals: string[] = await api.scry({
         app: 'boat',
-        path: `/online/`,
+        path: '/online/',
       });
       set({ online: onlinePals });
     } catch (e) {
@@ -164,28 +158,29 @@ const usePalsState = create<PalsStore>((set, get) => ({
     const json = alert
       ? { tack: { in: [], ship: id } }
       : {
-        veer: { in: [], ship: id },
-      };
+          veer: { in: [], ship: id },
+        };
     api.poke({
       app: 'boat',
       mark: 'boat-command',
       json: json,
     });
-
-    const online = api
+    api
       .scry({
         app: 'boat',
         path: `/online/~${id}`,
       })
-      .then(online => {
-        console.log('online', online);
-        return online;
+      .then(on => {
+        console.log('online', on);
+        const online = on as boolean | null;
+        const pals = get().pals.map(pal =>
+          pal.id === id ? { ...pal, alert: alert, onlineStatus: online } : pal,
+        );
+        set({ pals });
+      })
+      .catch(e => {
+        console.error(e);
       });
-
-    const pals = get().pals.map(pal =>
-      pal.id === id ? { ...pal, alert: alert, onlineStatus: online } : pal,
-    );
-    set({ pals });
   },
   fetchPals: async (api: Urbit) => {
     try {
@@ -261,8 +256,8 @@ const ContactsList: React.FC<Props> = ({ route }) => {
   const [isOnline, setOnline] = useState(false);
   const { theme } = useTheme();
   let { ship, api, connectionReady } = useUrbit(config);
-  const handleStatusChange = (api: Urbit, status: boolean) => {
-    setOnlineStatus(config, api, status);
+  const handleStatusChange = (status: boolean) => {
+    setOnlineStatus(config, status);
     setOnline(status);
   };
   const [animatedValue] = useState(
@@ -337,7 +332,7 @@ const ContactsList: React.FC<Props> = ({ route }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [api, connectionReady, retries]);
+  }, [api, connectionReady, fetchOnline, fetchPals, retries, subscribeOnline]);
 
   const toggleSwitch = (id: string, value: boolean) => {
     if (!value) {
@@ -348,7 +343,7 @@ const ContactsList: React.FC<Props> = ({ route }) => {
   };
 
   const handleStatusPress = () => {
-    handleStatusChange(api, !isOnline);
+    handleStatusChange(!isOnline);
     animateStatusText(isOnline ? -slideDistance : 0);
   };
 

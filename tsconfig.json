@@ -1,4 +1,6 @@
 {
   "extends": "@tsconfig/react-native/tsconfig.json",
-  "plugins": [{"name": "typescript-eslint-language-service"}]
+  "compilerOptions": {
+    "plugins": [{"name": "typescript-eslint-language-service"}]
+  }
 }
