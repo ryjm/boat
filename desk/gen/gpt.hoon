@@ -16,8 +16,8 @@
   =/  headers
     :~  ["content-type" "application/json"]
     ["authorization" (cat 3 "Bearer " api-key)]
-  =/  chart  (need (de-purl:html url))
-  ;<  ~  bind:m  (sail chart)
+  =/  blip  (need (de-purl:html url))
+  ;<  ~  bind:m  (sail blip)
   ;<  ~  bind:m  (fetch-headers headers)
   ;<  ~  bind:m  (send-payload payload)
   (parse-response)

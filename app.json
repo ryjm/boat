@@ -1,4 +1,21 @@
 {
   "name": "boat",
-  "displayName": "boat"
+  "displayName": "boat",
+  "expo": {
+    "name": "boat",
+    "slug": "boat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "AppIcons/boat.png",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
 }

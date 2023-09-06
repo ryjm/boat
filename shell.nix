@@ -2,4 +2,4 @@
 
 with pkgs;
 
-mkShell { buildInputs = [ ruby typescript ]; } B
+mkShell { buildInputs = [ ruby typescript ]; } 

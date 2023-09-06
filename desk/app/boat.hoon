@@ -275,7 +275,6 @@
     ?.  =(our.bowl src.bowl)  ~
     =/  =cage  [%boat-effect !>(`effect`[%moor our.bowl])]
     [%give %fact [/online]~ cage]~
-
     ::
       [%liv ~]
     ?:  =(our.bowl src.bowl)
@@ -381,6 +380,4 @@
 ++  requests  sos
 ++  charted  ~(key by radar)
 ++  convoy  (~(int in charted) requests)
-
 --
-
